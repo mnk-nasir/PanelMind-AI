@@ -1,0 +1,67 @@
+steps:
+  # 1. Build the Backend Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-core-api:$COMMIT_SHA',
+      '.'
+    ]
+    dir: 'backend'
+
+  # 2. Push the Backend Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-core-api:$COMMIT_SHA'
+    ]
+
+  # 3. Deploy Backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy panelmind-core-api \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-core-api:$COMMIT_SHA \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --min-instances 1 \
+          --max-instances 10
+
+  # 4. Build the Frontend Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-web:$COMMIT_SHA',
+      '.'
+    ]
+    dir: 'frontend'
+
+  # 5. Push the Frontend Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-web:$COMMIT_SHA'
+    ]
+
+  # 6. Deploy Frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy panelmind-web \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-web:$COMMIT_SHA \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --min-instances 1 \
+          --max-instances 5
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-core-api:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/panelmind-repo/panelmind-web:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
